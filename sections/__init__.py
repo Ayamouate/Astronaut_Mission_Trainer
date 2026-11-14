@@ -1,0 +1,2 @@
+"""Independent AstroCare dashboard sections."""
+

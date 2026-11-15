@@ -13,10 +13,12 @@ INDICATORS_PATH = DATA_DIR / "indicators.json"
 SAMPLE_HISTORY_PATH = DATA_DIR / "sample_mission.csv"
 ASTRONAUT_DATA_PATH = DATA_DIR / "astronauts.json"
 THEME_PATH = ROOT / "styles" / "theme.css"
+LOGIN_BACKGROUND_PATH = ROOT / "assets" / "login-background.png"
 
 APP_TITLE = "AstroCare · Crew Health Command"
 APP_ICON = "✦"
 SECTION_ORDER = [
+    "Mission Overview",
     "Health Monitoring",
     "Physical Wellness",
     "Mental Wellness",
@@ -25,6 +27,7 @@ SECTION_ORDER = [
 ]
 
 SECTION_SUBTITLES = {
+    "Mission Overview": "A calm, high-signal briefing of crew readiness, priority actions, and mission context.",
     "Health Monitoring": "A fast, explainable view of physiology and readiness during the mission.",
     "Physical Wellness": "Track countermeasures, recovery, and the physical effects of altered gravity.",
     "Mental Wellness": "A private, human-centered check on mood, stress, sleep, and cognition.",
@@ -34,4 +37,3 @@ SECTION_SUBTITLES = {
 
 # The JSON library remains the source of truth for indicator definitions and thresholds.
 INDICATORS = load_indicators(INDICATORS_PATH)
-

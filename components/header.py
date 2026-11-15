@@ -23,5 +23,13 @@ def render_section_header(title: str, subtitle: str | None = None, state: str | 
 
 def render_section_bar(title: str, note: str = "") -> None:
     """Render the compact title row used above dashboard panels."""
-    st.markdown(f'<div class="section-bar"><div class="section-title">{title}</div><div class="section-note">{note}</div></div>', unsafe_allow_html=True)
-
+    icons = {
+        "Core physiological signals": "♥",
+        "Telemetry coverage": "◌",
+        "Environmental history": "⌁",
+        "Environmental notifications": "△",
+        "Crew health map": "◉",
+        "Baseline trend": "↗",
+    }
+    icon = icons.get(title, "·")
+    st.markdown(f'<div class="section-bar"><div class="section-title"><span class="section-icon">{icon}</span>{title}</div><div class="section-note">{note}</div></div>', unsafe_allow_html=True)

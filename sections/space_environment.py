@@ -6,21 +6,40 @@ import streamlit as st
 
 from components.charts import render_history_chart
 from components.header import render_section_bar, render_section_header
-from components.metric_cards import render_indicator_cards, render_summary_cards
+from components.metric_cards import render_indicator_cards
 from components.status_indicators import render_alert, render_signal_rows, sort_results
 from config import INDICATORS, SECTION_SUBTITLES
-from engine import readiness_score, readiness_state
+from engine import evaluate_measurements, readiness_score, readiness_state
 from state import initialize_state
 
 
 ENVIRONMENT_INDICATORS = ["cabin_co2", "radiation_dose"]
-UNAVAILABLE_TELEMETRY = [
-    ("Cabin temperature", "Not in demo telemetry"),
-    ("Cabin humidity", "Not in demo telemetry"),
-    ("Cabin pressure", "Not in demo telemetry"),
-    ("Cabin oxygen", "Not in demo telemetry"),
-    ("Microgravity exposure", "Not in demo telemetry"),
-]
+SIMULATED_ENVIRONMENT = {"cabin_co2": 2200.0, "radiation_dose": 0.8}
+
+
+def _sparkline(color: str) -> str:
+    """Return a small decorative trend line for simulated telemetry."""
+    return (
+        f'<svg class="telemetry-sparkline" viewBox="0 0 120 24" aria-hidden="true">'
+        f'<path d="M1 17 L12 14 L23 16 L34 9 L45 12 L56 7 L67 11 L78 6 L89 9 L100 4 L119 7" '
+        f'style="stroke:{color}"/></svg>'
+    )
+
+
+def _render_simulated_cards() -> None:
+    """Render non-persistent demo telemetry with a live-monitoring treatment."""
+    cards = [
+        ("Cabin CO₂", "2200 ppm", "NOMINAL · simulated", "#42D9E8"),
+        ("Radiation dose", "0.8 mSv", "NOMINAL · simulated", "#F4BC62"),
+    ]
+    columns = st.columns(2)
+    for column, (label, value, detail, color) in zip(columns, cards):
+        with column:
+            st.markdown(
+                f'<div class="telemetry-card"><div class="telemetry-card-head"><span class="telemetry-label"><span class="pulse-dot" style="--pulse-color:{color}"></span>{label}</span><span class="telemetry-mode">SIM</span></div>'
+                f'<div class="telemetry-value">{value}</div><div class="telemetry-detail" style="color:{color}">{detail}</div>{_sparkline(color)}</div>',
+                unsafe_allow_html=True,
+            )
 
 
 def render() -> None:
@@ -29,16 +48,24 @@ def render() -> None:
     history = st.session_state["history"]
     results = st.session_state["last_results"]
     environment_results = [result for result in results if result.get("id") in ENVIRONMENT_INDICATORS]
+    simulate = st.toggle("Simulated telemetry", value=True, help="Use demonstration values without writing them to your astronaut history.")
+    if simulate:
+        environment_results = evaluate_measurements(SIMULATED_ENVIRONMENT, INDICATORS)
     score = readiness_score(environment_results)
     state = readiness_state(score, environment_results)
 
     render_section_header("Space Environment", SECTION_SUBTITLES["Space Environment"], state)
     render_alert(state)
-    render_indicator_cards(results, ENVIRONMENT_INDICATORS, INDICATORS, columns=2)
+    if simulate:
+        _render_simulated_cards()
+    else:
+        render_indicator_cards(results, ENVIRONMENT_INDICATORS, INDICATORS, columns=2)
 
-    render_section_bar("Telemetry coverage", "the demo shows only fields present in the supplied mission log")
-    render_summary_cards([{"label": label, "value": "N/A", "detail": detail, "tone": "muted"} for label, detail in UNAVAILABLE_TELEMETRY], columns=3)
-    st.caption("Cabin temperature, humidity, pressure, oxygen, and microgravity exposure require validated vehicle telemetry integrations before they can be displayed here.")
+    render_section_bar("Telemetry coverage", "vehicle integration status")
+    st.markdown(
+        '<div class="coverage-banner"><span class="coverage-icon">◌</span><div><strong>5 vehicle sensors awaiting integration</strong><p>Temperature, humidity, pressure, oxygen, and microgravity exposure are intentionally hidden until validated telemetry is available.</p></div><span class="coverage-status">NOT CONNECTED</span></div>',
+        unsafe_allow_html=True,
+    )
 
     render_section_bar("Environmental history", "normal bands are configured in the indicator library")
     left, right = st.columns(2, gap="large")
@@ -57,4 +84,3 @@ def render() -> None:
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown('<div class="info-panel"><div class="panel-title">Why the habitat matters <span>HUMAN–SYSTEM LINK</span></div><p>Closed-habitat air quality can affect cognition and performance, while ionizing radiation is cumulative and may be episodic. Environmental alerts should be handled through vehicle alarms, approved radiation procedures, operations support, and the crew medical plan—not improvised treatment.</p></div>', unsafe_allow_html=True)
-

@@ -63,6 +63,7 @@ state.py                       # Shared Streamlit session-state lifecycle
 
 sections/
   __init__.py
+  mission_overview.py       # Signed-in landing dashboard and quick navigation
   health_monitoring.py         # Readiness, body map, check-in, priority signals
   physical_wellness.py         # Exercise, strength, recovery, countermeasures
   mental_wellness.py           # Mood, stress, sleep, cognition, privacy messaging

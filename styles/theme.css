@@ -33,10 +33,11 @@ h2 { font-size: 1.25rem !important; letter-spacing: -.03em; }
 h3 { font-size: 1rem !important; }
 .mono, code { font-family: 'DM Mono', monospace !important; }
 
-.brand { display: flex; align-items: center; gap: .7rem; margin: 0 0 2.6rem .1rem; }
+.brand { display: flex; align-items: center; gap: .7rem; margin: 0 0 2.15rem .1rem; }
 .brand-mark { width: 35px; height: 35px; display: grid; place-items: center; border: 1px solid #36506b; border-radius: 11px; color: var(--mint); font-size: 1.3rem; box-shadow: 0 0 24px rgba(131, 242, 206, .1); }
 .brand-name { font: 600 1rem Manrope, sans-serif; letter-spacing: .12em; color: #f3f7fb; }
 .brand-name span { color: var(--mint); }
+.brand-tagline { color: #64768b; font: 500 .52rem var(--mono); letter-spacing: .12em; margin-top: .18rem; }
 .sidebar-label { color: #64768b; text-transform: uppercase; font: 500 .65rem 'DM Mono', monospace; letter-spacing: .14em; margin: 0 0 .7rem; }
 .sidebar-copy { color: #7f93a9; font-size: .71rem; line-height: 1.55; }
 .mission-card { background: #0d2033; border: 1px solid #1d3b54; border-radius: 15px; padding: 1rem; margin-top: .65rem; }
@@ -309,6 +310,15 @@ div[data-testid="stMetricValue"] { color: #f4f7fb; font-family: 'DM Mono', monos
 [data-testid="stSidebar"] [data-testid="stRadio"] label:hover { background: #10253a; border-color: #29435a; color: #eaf2fa; }
 [data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) { background: linear-gradient(100deg, #123846, #10263a); border-color: #275365; color: var(--mint); box-shadow: inset 2px 0 var(--mint); }
 [data-testid="stSidebar"] [data-testid="stRadio"] label > div:first-child { display: none; }
+[data-testid="stSidebar"] [data-testid="stRadio"] label { align-items: center; display: flex; font: 500 .78rem var(--sans); gap: .7rem; min-height: 2.45rem; }
+[data-testid="stSidebar"] [data-testid="stRadio"] label:before { align-items: center; color: #7890a5; display: inline-flex; font: 1rem "Segoe UI Symbol", sans-serif; height: 1.25rem; justify-content: center; width: 1.25rem; }
+[data-testid="stSidebar"] [data-testid="stRadio"] label:nth-child(1):before { content: "⌂"; }
+[data-testid="stSidebar"] [data-testid="stRadio"] label:nth-child(2):before { content: "◉"; }
+[data-testid="stSidebar"] [data-testid="stRadio"] label:nth-child(3):before { content: "◌"; }
+[data-testid="stSidebar"] [data-testid="stRadio"] label:nth-child(4):before { content: "✦"; }
+[data-testid="stSidebar"] [data-testid="stRadio"] label:nth-child(5):before { content: "◇"; }
+[data-testid="stSidebar"] [data-testid="stRadio"] label:nth-child(6):before { content: "◈"; }
+[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked):before { color: var(--mint); }
 .sidebar-bottom { margin-top: auto; padding-top: 1.25rem; border-top: 1px solid #1b3045; }
 .sidebar-bottom ~ div [data-testid="stButton"] button { min-height: 2.6rem; }
 .sidebar-spacer { height: 1rem; }

@@ -52,6 +52,9 @@ def readiness_score(results: list[dict[str, Any]]) -> int:
 
 
 def readiness_state(score: int, results: list[dict[str, Any]]) -> str:
+    observed = [item for item in results if item.get("status") != "unknown"]
+    if not observed:
+        return "UNKNOWN"
     if any(item["status"] == "critical" for item in results):
         return "ESCALATE"
     if any(item["status"] == "attention" for item in results) or score < 80:
@@ -80,10 +83,23 @@ def trend_for(history: pd.DataFrame, indicator_id: str, window: int = 5) -> dict
     return {"direction": direction, "delta": delta, "label": label}
 
 
-def append_check_in(history: pd.DataFrame, values: dict[str, Any], timestamp: str) -> pd.DataFrame:
-    row = {column: values.get(column) for column in history.columns if column != "timestamp"}
+def append_check_in(
+    history: pd.DataFrame,
+    values: dict[str, Any],
+    timestamp: str,
+    event_type: str = "health",
+) -> pd.DataFrame:
+    """Append only newly submitted measurements, preserving missing values as missing."""
+    history = history.copy()
+    if "event_type" not in history.columns:
+        history["event_type"] = "health"
+    else:
+        history["event_type"] = history["event_type"].fillna("health")
+    row = {column: None for column in history.columns if column != "timestamp"}
+    row.update(values)
+    row["event_type"] = event_type
     row["timestamp"] = timestamp
     updated = pd.concat([history, pd.DataFrame([row])], ignore_index=True)
-    updated["timestamp"] = pd.to_datetime(updated["timestamp"])
+    updated["timestamp"] = pd.to_datetime(updated["timestamp"], utc=True, errors="coerce")
     return updated.sort_values("timestamp").reset_index(drop=True)
 

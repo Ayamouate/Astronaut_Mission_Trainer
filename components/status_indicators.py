@@ -11,7 +11,7 @@ from engine import sort_by_priority
 
 def state_tone(state: str) -> str:
     """Map a readiness state to the CSS tone used by shared components."""
-    return {"NOMINAL": "good", "WATCH": "warn", "ESCALATE": "bad"}.get(state, "good")
+    return {"NOMINAL": "good", "WATCH": "warn", "ESCALATE": "bad", "UNKNOWN": "unknown"}.get(state, "unknown")
 
 
 def render_alert(state: str) -> None:
@@ -20,6 +20,7 @@ def render_alert(state: str) -> None:
         "NOMINAL": ("✓", "NO ACUTE FLAGS", "Your latest check-in is inside the demo baseline. Keep the scheduled monitoring cadence."),
         "WATCH": ("△", "WATCH ITEMS PRESENT", "One or more readings deserve a repeat, a recovery action, or a flight-surgeon review."),
         "ESCALATE": ("!", "ESCALATE TO CREW MEDICAL", "At least one reading is outside the demo safety envelope. Use the approved mission protocol now."),
+        "UNKNOWN": ("i", "AWAITING BASELINE", "No readings are available yet. Record a check-in to establish your personal status."),
     }.get(state, ("i", "STATUS UNAVAILABLE", "No evaluated readings are currently available."))
     st.markdown(f'<div class="alert {state.lower()}"><div class="icon">{copy[0]}</div><div><div class="title">{copy[1]}</div><div class="copy">{copy[2]}</div></div></div>', unsafe_allow_html=True)
 

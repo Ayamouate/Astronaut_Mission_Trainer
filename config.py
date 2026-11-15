@@ -23,8 +23,8 @@ SECTION_ORDER = [
     "Physical Wellness",
     "Mental Wellness",
     "Space Environment",
-    "Mission Support",
 ]
+
 
 SECTION_SUBTITLES = {
     "Mission Overview": "A calm, high-signal briefing of crew readiness, priority actions, and mission context.",

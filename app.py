@@ -22,7 +22,6 @@ SECTION_RENDERERS = {
     "Mission Support": mission_support,
 }
 
-
 def inject_css() -> None:
     """Load the shared theme from disk so frontend styling has one owner."""
     try:
@@ -51,16 +50,11 @@ def render_sign_in() -> None:
     )
     login_tab, create_tab = st.tabs(["Sign in", "Create astronaut profile"])
     with login_tab:
-        if "login_password_visible" not in st.session_state:
-            st.session_state["login_password_visible"] = False
-        toggle_label = "Hide password" if st.session_state["login_password_visible"] else "Show password"
-        if st.button(toggle_label, key="toggle_login_password"):
-            st.session_state["login_password_visible"] = not st.session_state["login_password_visible"]
         with st.form("astronaut_signin"):
             email = st.text_input("Email address", key="login_email", placeholder="you@mission.example")
             password = st.text_input(
                 "Password",
-                type="default" if st.session_state["login_password_visible"] else "password",
+                type="password",
                 key="login_password",
             )
             submitted = st.form_submit_button("Sign in", type="primary", use_container_width=True)
@@ -76,7 +70,6 @@ def render_sign_in() -> None:
     with create_tab:
         with st.form("astronaut_signup"):
             name = st.text_input("Full name")
-            callsign = st.text_input("Crew label / callsign")
             email = st.text_input("Email address", placeholder="you@mission.example")
             password = st.text_input("Password", type="password", help="Use at least 8 characters.")
             confirmation = st.text_input("Confirm password", type="password")
@@ -85,7 +78,7 @@ def render_sign_in() -> None:
             if password != confirmation:
                 st.error("The passwords do not match.")
             else:
-                created, result = create_account(name, callsign, email, password)
+                created, result = create_account(name, email, password)
                 if created:
                     st.session_state["astronaut_email"] = result
                     st.rerun()
@@ -104,35 +97,24 @@ def main() -> None:
     profile = get_profile(astronaut_email)
     render_sidebar(profile)
     selected = st.sidebar.radio(
-        "Workspace", SECTION_ORDER, label_visibility="collapsed", key="dashboard_section",
+        "Navigation", SECTION_ORDER, label_visibility="collapsed", key="dashboard_section",
         on_change=lambda: st.session_state.update(show_profile=False),
     )
     with st.sidebar:
-        st.markdown('<div class="sidebar-bottom">', unsafe_allow_html=True)
-        display_name = str(profile.get("name", "Crew member")).strip() or "Crew member"
-        initial = display_name[0].upper()
-        profile_column, name_column = st.columns([0.24, 0.76], gap="small", vertical_alignment="center")
-        with profile_column:
-            st.markdown(f'<div class="sidebar-avatar" aria-hidden="true">{initial}</div>', unsafe_allow_html=True)
-        with name_column:
-            if st.button(display_name, key="sidebar_profile", help="Edit profile", use_container_width=True):
-                st.session_state["show_profile"] = not st.session_state.get("show_profile", False)
-        if st.button("Sign out", key="sidebar_signout", use_container_width=True):
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container(key="sidebar_bottom"):
+            if st.button("Sign out", key="sidebar_signout", width="stretch"):
+                for key in list(st.session_state.keys()):
+                    del st.session_state[key]
+                st.rerun()
 
     if st.session_state.get("show_profile"):
-        st.markdown('<div class="kicker">Crew account</div>', unsafe_allow_html=True)
         st.title("Edit profile")
         with st.form("edit_profile"):
             name = st.text_input("Full name", value=profile.get("name", ""))
-            callsign = st.text_input("Crew label / callsign", value=profile.get("callsign", ""))
             email = st.text_input("Email", value=profile.get("email", ""))
             saved = st.form_submit_button("Save changes", type="primary")
         if saved:
-            ok, result = update_profile(astronaut_email, name, callsign, email)
+            ok, result = update_profile(astronaut_email, name, email)
             if ok:
                 st.session_state["astronaut_email"] = result
                 st.success("Profile updated.")

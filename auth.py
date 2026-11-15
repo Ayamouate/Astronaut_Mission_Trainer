@@ -7,9 +7,14 @@ import hmac
 import json
 import re
 import secrets
+import os
+import tempfile
+import threading
 from typing import Any
 
 from config import ASTRONAUT_DATA_PATH
+
+_DATA_LOCK = threading.RLock()
 
 
 def _load() -> dict[str, Any]:
@@ -23,9 +28,14 @@ def _load() -> dict[str, Any]:
 
 def _save(data: dict[str, Any]) -> None:
     ASTRONAUT_DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
-    temporary = ASTRONAUT_DATA_PATH.with_suffix(".tmp")
-    temporary.write_text(json.dumps(data, indent=2), encoding="utf-8")
-    temporary.replace(ASTRONAUT_DATA_PATH)
+    with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=ASTRONAUT_DATA_PATH.parent, suffix=".tmp", delete=False) as handle:
+        temporary = handle.name
+        json.dump(data, handle, indent=2)
+    try:
+        os.replace(temporary, ASTRONAUT_DATA_PATH)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
 
 
 def _password_hash(password: str, salt: bytes) -> str:
@@ -36,7 +46,7 @@ def _valid_email(email: str) -> bool:
     return bool(re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email))
 
 
-def create_account(name: str, callsign: str, email: str, password: str) -> tuple[bool, str]:
+def create_account(name: str, email: str, password: str) -> tuple[bool, str]:
     key = email.strip().lower()
     if not name.strip() or not key or not password:
         return False, "Enter your name, email, and password."
@@ -44,20 +54,17 @@ def create_account(name: str, callsign: str, email: str, password: str) -> tuple
         return False, "Enter a valid mission email address."
     if len(password) < 8:
         return False, "Choose a password with at least 8 characters."
-    data = _load()
-    astronauts = data.setdefault("astronauts", {})
-    if key in astronauts:
-        return False, "An account with that email already exists."
-    salt = secrets.token_bytes(16)
-    astronauts[key] = {
-        "name": name.strip(),
-        "callsign": callsign.strip(),
-        "email": key,
-        "salt": salt.hex(),
-        "password_hash": _password_hash(password, salt),
-        "checkins": [],
-    }
-    _save(data)
+    with _DATA_LOCK:
+        data = _load()
+        astronauts = data.setdefault("astronauts", {})
+        if key in astronauts:
+            return False, "An account with that email already exists."
+        salt = secrets.token_bytes(16)
+        astronauts[key] = {
+            "name": name.strip(), "email": key, "salt": salt.hex(),
+            "password_hash": _password_hash(password, salt), "checkins": [],
+        }
+        _save(data)
     return True, key
 
 
@@ -78,24 +85,27 @@ def get_profile(email: str) -> dict[str, Any] | None:
     return _load().get("astronauts", {}).get(email.strip().lower())
 
 
-def update_profile(email: str, name: str, callsign: str, new_email: str) -> tuple[bool, str]:
+def update_profile(email: str, name: str, new_email: str) -> tuple[bool, str]:
     """Update editable astronaut identity fields while preserving account credentials."""
     old_key = email.strip().lower()
     new_key = new_email.strip().lower()
     if not name.strip() or not new_key:
         return False, "Name and email are required."
-    data = _load()
-    astronauts = data.get("astronauts", {})
-    profile = astronauts.get(old_key)
-    if profile is None:
-        return False, "Account not found."
-    if new_key != old_key and new_key in astronauts:
-        return False, "That email is already in use."
-    profile.update({"name": name.strip(), "callsign": callsign.strip(), "email": new_key})
-    if new_key != old_key:
-        astronauts[new_key] = profile
-        del astronauts[old_key]
-    _save(data)
+    if not _valid_email(new_key):
+        return False, "Enter a valid mission email address."
+    with _DATA_LOCK:
+        data = _load()
+        astronauts = data.get("astronauts", {})
+        profile = astronauts.get(old_key)
+        if profile is None:
+            return False, "Account not found."
+        if new_key != old_key and new_key in astronauts:
+            return False, "That email is already in use."
+        profile.update({"name": name.strip(), "email": new_key})
+        if new_key != old_key:
+            astronauts[new_key] = profile
+            del astronauts[old_key]
+        _save(data)
     return True, new_key
 
 
@@ -105,9 +115,10 @@ def get_checkins(email: str) -> list[dict[str, Any]]:
 
 
 def save_checkin(email: str, entry: dict[str, Any]) -> None:
-    data = _load()
-    profile = data.get("astronauts", {}).get(email.strip().lower())
-    if profile is None:
-        return
-    profile.setdefault("checkins", []).append(entry)
-    _save(data)
+    with _DATA_LOCK:
+        data = _load()
+        profile = data.get("astronauts", {}).get(email.strip().lower())
+        if profile is None:
+            return
+        profile.setdefault("checkins", []).append(entry)
+        _save(data)

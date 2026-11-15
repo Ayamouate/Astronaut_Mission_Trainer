@@ -8,8 +8,8 @@ import streamlit as st
 
 from components.charts import render_history_chart, render_multi_history_chart
 from components.header import render_section_bar, render_section_header
-from components.metric_cards import render_indicator_cards, render_summary_cards
-from components.status_indicators import render_alert, render_signal_rows, sort_results
+from components.metric_cards import render_indicator_cards
+from components.status_indicators import render_alert
 from config import INDICATORS, SECTION_SUBTITLES
 from engine import readiness_score, readiness_state
 from state import initialize_state, save_check_in
@@ -58,34 +58,18 @@ def render() -> None:
 
     render_section_header("Mental Wellness", SECTION_SUBTITLES["Mental Wellness"], state)
     render_alert(state)
-    render_indicator_cards(results, MENTAL_INDICATORS, INDICATORS, columns=4)
-    render_summary_cards([
-        {"label": "Fatigue level", "value": "N/A", "detail": "Use sleep and reaction-time trends as context", "tone": "muted"},
-        {"label": "Social connection", "value": "N/A", "detail": "No direct isolation telemetry in demo data", "tone": "muted"},
-    ], columns=2)
+    with st.expander("Open private wellbeing check-in", expanded=False):
+        _render_private_check_in(results)
 
+    render_indicator_cards(results, MENTAL_INDICATORS, INDICATORS, columns=4, history=history)
     st.markdown('<div class="privacy-note"><strong>Private by design:</strong> mood and stress are self-reported signals, not diagnoses. Use approved behavioral-health support for sensitive concerns; urgent safety concerns should be shared with the crew immediately. This prototype does not store free-text reflections in the mission CSV.</div>', unsafe_allow_html=True)
 
     render_section_bar("Wellbeing trends", "recent self-report and performance signals")
     chart_left, chart_right = st.columns(2, gap="large")
     with chart_left:
-        st.markdown('<div class="panel">', unsafe_allow_html=True)
-        render_multi_history_chart(history, ["mood_score", "stress_score"], INDICATORS, "Mood and stress trend")
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown('<div class="panel-title">Mood & stress trend <span>MEASURED</span></div>', unsafe_allow_html=True)
+        render_multi_history_chart(history, ["mood_score", "stress_score"], INDICATORS, "")
     with chart_right:
-        st.markdown('<div class="panel">', unsafe_allow_html=True)
-        render_history_chart(history, "sleep_duration", INDICATORS, "Sleep window")
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    render_section_bar("Recommended recovery actions", "supportive prompts, not clinical diagnoses")
-    left, right = st.columns([1.15, .85], gap="large")
-    with left:
-        st.markdown('<div class="panel">', unsafe_allow_html=True)
-        render_signal_rows(sort_results(mental_results))
-        st.markdown("</div>", unsafe_allow_html=True)
-    with right:
-        st.markdown('<div class="panel"><div class="panel-title">Crew-friendly reset <span>LOW RISK</span></div><div class="playbook-item"><div class="step">01</div><div><strong>Protect the next recovery window</strong><p>Reduce nonessential workload and keep the approved sleep/light routine consistent.</p></div></div><div class="playbook-item"><div class="step">02</div><div><strong>Reconnect with the crew</strong><p>Use a trusted crew member or scheduled behavioral-health check-in when isolation or stress persists.</p></div></div><div class="playbook-item"><div class="step">03</div><div><strong>Repeat under consistent conditions</strong><p>Compare trends at a similar time, posture, device, and workload context.</p></div></div></div>', unsafe_allow_html=True)
-
-    with st.expander("Open private wellbeing check-in", expanded=False):
-        _render_private_check_in(results)
+        st.markdown('<div class="panel-title">Sleep duration trend <span>MEASURED</span></div>', unsafe_allow_html=True)
+        render_history_chart(history, "sleep_duration", INDICATORS, "")
 

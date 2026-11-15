@@ -75,6 +75,12 @@ def _render_check_in() -> bool:
 def render() -> None:
     """Render the Health Monitoring dashboard."""
     initialize_state()
+    history = st.session_state["history"]
+    results = st.session_state["last_results"]
+    score = readiness_score(results)
+    state = readiness_state(score, results)
+    render_section_header("Health Monitoring", SECTION_SUBTITLES["Health Monitoring"], state)
+
     with st.expander("Open full check-in", expanded=True):
         st.markdown('<div class="section-note form-note">Use approved devices and mission procedures. Symptoms and flight-surgeon direction take priority over any dashboard range.</div>', unsafe_allow_html=True)
         evaluated = _render_check_in()
@@ -87,24 +93,20 @@ def render() -> None:
     if evaluated:
         _show_health_evaluation(results)
 
-    render_section_header("Health Monitoring", SECTION_SUBTITLES["Health Monitoring"], state)
     render_alert(state)
     render_readiness_cards(score, state, results, st.session_state["checkins"], history)
 
     render_section_bar("Core physiological signals", "latest evaluated check-in")
-    render_indicator_cards(results, HEALTH_INDICATORS, INDICATORS, columns=3)
+    render_indicator_cards(results, HEALTH_INDICATORS, INDICATORS, columns=3, history=history)
 
     render_section_bar("Crew health map", "select a system to inspect its readings")
     render_body_map(results, INDICATORS)
-    st.markdown("</div>", unsafe_allow_html=True)
 
     render_section_bar("Baseline trend", "last 14 mission days")
     chart_left, chart_right = st.columns(2, gap="large")
     with chart_left:
         render_history_chart(history, "heart_rate", INDICATORS, "Cardiovascular load")
-        st.markdown("</div>", unsafe_allow_html=True)
     with chart_right:
         render_history_chart(history, "sleep_duration", INDICATORS, "Recovery window")
-        st.markdown("</div>", unsafe_allow_html=True)
 
 

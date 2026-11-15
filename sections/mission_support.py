@@ -39,15 +39,14 @@ def render() -> None:
     render_section_bar("Mission health alerts", "ordered by urgency · simulated data")
     left, right = st.columns([1.15, .85], gap="large")
     with left:
-        st.markdown('<div class="panel">', unsafe_allow_html=True)
-        render_signal_rows(sort_results(results), limit=8)
-        st.markdown("</div>", unsafe_allow_html=True)
+        with st.container(border=True):
+            render_signal_rows(sort_results(results), limit=8)
     with right:
-        st.markdown('<div class="panel"><div class="panel-title">How to read status <span>HUMAN IN THE LOOP</span></div>', unsafe_allow_html=True)
-        for status, title in [("normal", "Normal monitoring"), ("attention", "Warning requiring attention"), ("critical", "Critical: immediate action")]:
-            label, detail = _guidance_for(status)
-            st.markdown(f'<div class="guidance-row"><span class="status-dot {status}"></span><div><strong>{title}</strong><p>{detail}</p></div></div>', unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown('<div class="panel-title">How to read status <span>HUMAN IN THE LOOP</span></div>', unsafe_allow_html=True)
+            for status, title in [("normal", "Normal monitoring"), ("attention", "Warning requiring attention"), ("critical", "Critical: immediate action")]:
+                label, detail = _guidance_for(status)
+                st.markdown(f'<div class="guidance-row"><span class="status-dot {status}"></span><div><strong>{title}</strong><p>{detail}</p></div></div>', unsafe_allow_html=True)
 
     render_section_bar("Approved next actions", "decision support, not a diagnosis")
     prioritized = sort_results(results)
@@ -68,16 +67,15 @@ def render() -> None:
     render_section_bar("Mission health history", "trend context for the next human review")
     left, right = st.columns(2, gap="large")
     with left:
-        st.markdown('<div class="panel">', unsafe_allow_html=True)
-        render_history_chart(history, "heart_rate", INDICATORS, "Cardiovascular history")
-        st.markdown("</div>", unsafe_allow_html=True)
+        with st.container(border=True):
+            render_history_chart(history, "heart_rate", INDICATORS, "Cardiovascular history")
     with right:
-        st.markdown('<div class="panel">', unsafe_allow_html=True)
-        render_history_chart(history, "radiation_dose", INDICATORS, "Radiation context")
-        st.markdown("</div>", unsafe_allow_html=True)
+        with st.container(border=True):
+            render_history_chart(history, "radiation_dose", INDICATORS, "Radiation context")
 
     points = points_for_results(results)
-    streak = current_streak(history["timestamp"] if "timestamp" in history else [])
+    health_history = history[history["event_type"] != "exercise"] if "event_type" in history else history
+    streak = current_streak(health_history["timestamp"] if "timestamp" in health_history else [])
     badges = badges_for_checkins(checkins, streak, score)
     render_section_bar("Crew reinforcement", "consistency protects the baseline")
     left, right = st.columns([.8, 1.2], gap="large")
@@ -87,12 +85,12 @@ def render() -> None:
             {"label": "Check-in streak", "value": f"{streak} days", "detail": "keep the rhythm", "tone": "good"},
         ], columns=2)
     with right:
-        st.markdown('<div class="panel"><div class="panel-title">Earned on this mission <span>REINFORCEMENT</span></div>', unsafe_allow_html=True)
-        for badge in badges:
-            color = "#83f2ce" if badge["earned"] else "#516579"
-            earned = "earned" if badge["earned"] else "locked"
-            st.markdown(f'<div class="signal-row"><div style="font-size:1.15rem;color:{color};width:25px;text-align:center">{badge["icon"]}</div><div class="signal-main"><div class="signal-label">{badge["name"]}</div><div class="signal-message">{badge["detail"]}</div></div><div class="status-text" style="color:{color}">{earned}</div></div>', unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown('<div class="panel-title">Earned on this mission <span>REINFORCEMENT</span></div>', unsafe_allow_html=True)
+            for badge in badges:
+                color = "#4ED6B0" if badge["earned"] else "#516579"
+                earned = "earned" if badge["earned"] else "locked"
+                st.markdown(f'<div class="signal-row"><div style="font-size:1.15rem;color:{color};width:25px;text-align:center">{badge["icon"]}</div><div class="signal-main"><div class="signal-label">{badge["name"]}</div><div class="signal-message">{badge["detail"]}</div></div><div class="status-text" style="color:{color}">{earned}</div></div>', unsafe_allow_html=True)
 
     st.markdown('<div class="info-panel"><div class="panel-title">Safety boundary <span>IMPORTANT</span></div><p>AstroCare is an explainable prototype using simulated readings and illustrative thresholds. It does not diagnose conditions or replace NASA / agency procedures, a mission medical operations plan, behavioral-health support, operations control, or flight-surgeon judgment.</p></div>', unsafe_allow_html=True)
 

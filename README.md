@@ -199,11 +199,11 @@ Run the Streamlit AppTest smoke check for all five routes:
 from streamlit.testing.v1 import AppTest
 
 sections = [
+    "Mission Overview",
     "Health Monitoring",
     "Physical Wellness",
     "Mental Wellness",
     "Space Environment",
-    "Mission Support",
 ]
 
 app = AppTest.from_file("app.py", default_timeout=20).run()

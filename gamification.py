@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Iterable
 
 
@@ -25,15 +25,16 @@ def current_streak(checkin_timestamps: Iterable[Any]) -> int:
     days: set[date] = set()
     for timestamp in checkin_timestamps:
         if isinstance(timestamp, datetime):
-            days.add(timestamp.date())
+            days.add(timestamp.astimezone(timezone.utc).date() if timestamp.tzinfo else timestamp.replace(tzinfo=timezone.utc).date())
         elif isinstance(timestamp, date):
             days.add(timestamp)
         elif timestamp:
             try:
-                days.add(datetime.fromisoformat(str(timestamp)).date())
+                parsed = datetime.fromisoformat(str(timestamp))
+                days.add(parsed.astimezone(timezone.utc).date() if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc).date())
             except ValueError:
                 continue
-    today = date.today()
+    today = datetime.now(timezone.utc).date()
     # A streak remains active through today even if today's check-in is still pending.
     cursor = today if today in days else today - timedelta(days=1)
     streak = 0

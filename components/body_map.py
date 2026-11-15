@@ -50,7 +50,7 @@ SYSTEMS: dict[str, dict[str, Any]] = {
     },
 }
 
-STATUS_COLORS = {"normal": "#42e8d2", "attention": "#f2bd62", "critical": "#ff7187", "unknown": "#648a96"}
+STATUS_COLORS = {"normal": "#35C98A", "attention": "#F5B942", "critical": "#F16B72", "unknown": "#648a96"}
 STATUS_LABELS = {"normal": "NOMINAL", "attention": "WATCH", "critical": "ESCALATE", "unknown": "NO READING"}
 
 
@@ -71,9 +71,9 @@ def _format_measurement(item: dict[str, Any]) -> str:
 
 def _state_color(system: str, status: str) -> str:
     if status == "normal" and system in {"Nervous system", "Recovery & fluid"}:
-        return "#61adff"
+        return "#4D8DFF"
     if status == "attention" and system == "Space environment":
-        return "#f4d35e"
+        return "#F5B942"
     return STATUS_COLORS[status]
 
 

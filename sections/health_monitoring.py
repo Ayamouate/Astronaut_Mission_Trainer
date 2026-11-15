@@ -95,18 +95,15 @@ def render() -> None:
     render_indicator_cards(results, HEALTH_INDICATORS, INDICATORS, columns=3)
 
     render_section_bar("Crew health map", "select a system to inspect its readings")
-    st.markdown('<div class="panel">', unsafe_allow_html=True)
     render_body_map(results, INDICATORS)
     st.markdown("</div>", unsafe_allow_html=True)
 
     render_section_bar("Baseline trend", "last 14 mission days")
     chart_left, chart_right = st.columns(2, gap="large")
     with chart_left:
-        st.markdown('<div class="panel">', unsafe_allow_html=True)
         render_history_chart(history, "heart_rate", INDICATORS, "Cardiovascular load")
         st.markdown("</div>", unsafe_allow_html=True)
     with chart_right:
-        st.markdown('<div class="panel">', unsafe_allow_html=True)
         render_history_chart(history, "sleep_duration", INDICATORS, "Recovery window")
         st.markdown("</div>", unsafe_allow_html=True)
 

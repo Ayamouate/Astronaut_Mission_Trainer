@@ -245,3 +245,7 @@ div[data-testid="stMetricValue"] { color: #f4f7fb; font-family: 'DM Mono', monos
 .brand-mark { box-shadow: none; }
 .kicker, .hero-status .value, .sidebar-label, .mission-card .eyebrow, .side-stat strong, .section-note, .metric-card .label, .metric-card .number, .status-text, .status-pill, .system-reading strong, .mini-tag, .mono, code { font-family: var(--mono) !important; }
 .stProgress > div > div > div > div { background: var(--cyan, #42D9E8); }
+
+.sidebar-spacer { height: 2rem; }
+[data-testid="stSidebar"] [data-testid="stRadio"] label { padding: .6rem .7rem !important; border-radius: 9px; }
+[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) { background: #17384b; color: var(--mint); }

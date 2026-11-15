@@ -80,23 +80,32 @@ def main() -> None:
     if not astronaut_email or not get_profile(astronaut_email):
         render_sign_in()
         return
-    render_sidebar()
-
     profile = get_profile(astronaut_email)
+    render_sidebar()
     with st.sidebar:
-        st.markdown(f"**{profile['name']}** · {profile.get('callsign') or 'Crew member'}")
-        st.caption(profile["email"])
-        if st.button("Sign out", use_container_width=True):
+        st.markdown('<div class="sidebar-spacer"></div>', unsafe_allow_html=True)
+        if st.button(f"??  {profile['name']} ? Profile", key="sidebar_profile", use_container_width=True):
+            st.session_state["dashboard_section"] = "Profile"
+        if st.button("Sign out", key="sidebar_signout", use_container_width=True):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.rerun()
 
-    selected = st.radio("Mission dashboard", SECTION_ORDER, horizontal=True, label_visibility="collapsed", key="dashboard_section")
-    SECTION_RENDERERS[selected].render()
-    st.markdown(
-        f'<div class="footnote">Prototype for exploration-health design · simulated readings · not medical advice · {SECTION_SUBTITLES[selected]} Thresholds are illustrative and must be replaced by mission-approved clinical rules before operational use.</div>',
-        unsafe_allow_html=True,
-    )
+    choices = [*SECTION_ORDER, "Profile"]
+    selected = st.sidebar.radio("Workspace", choices, label_visibility="collapsed", key="dashboard_section")
+    if selected == "Profile":
+        st.markdown('<div class="kicker">Crew account</div>', unsafe_allow_html=True)
+        st.title("Your profile")
+        st.caption("Personal account and mission access")
+        st.markdown(f"### {profile['name']}")
+        st.write(f"**Crew label:** {profile.get('callsign') or 'Crew member'}")
+        st.write(f"**Email:** {profile['email']}")
+    else:
+        SECTION_RENDERERS[selected].render()
+        st.markdown(
+            f'<div class="footnote">Prototype for exploration-health design ? simulated readings ? not medical advice ? {SECTION_SUBTITLES[selected]} Thresholds are illustrative and must be replaced by mission-approved clinical rules before operational use.</div>',
+            unsafe_allow_html=True,
+        )
 
 
 if __name__ == "__main__":

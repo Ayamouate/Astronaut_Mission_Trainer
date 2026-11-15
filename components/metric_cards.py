@@ -9,7 +9,7 @@ import pandas as pd
 import streamlit as st
 
 from engine import trend_for
-from gamification import current_streak
+from streaks import current_streak
 
 
 _TREND_ARROW = {"up": "↑", "down": "↓", "flat": "→"}

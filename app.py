@@ -9,7 +9,7 @@ import streamlit as st
 from auth import authenticate, create_account, get_profile, update_profile
 from components.sidebar import render_sidebar
 from config import APP_ICON, APP_TITLE, LOGIN_BACKGROUND_PATH, SECTION_ORDER, SECTION_SUBTITLES, THEME_PATH
-from sections import health_monitoring, mental_wellness, mission_overview, mission_support, physical_wellness, space_environment
+from sections import health_monitoring, mental_wellness, mission_overview, physical_wellness, space_environment
 from state import initialize_state
 
 
@@ -19,7 +19,6 @@ SECTION_RENDERERS = {
     "Physical Wellness": physical_wellness,
     "Mental Wellness": mental_wellness,
     "Space Environment": space_environment,
-    "Mission Support": mission_support,
 }
 
 def inject_css() -> None:
@@ -45,7 +44,7 @@ def render_sign_in() -> None:
     """Show account creation and sign-in before opening a personal dashboard."""
     st.markdown(
         '<div class="login-shell"><div class="login-brand"><span class="login-mark">✦</span><div><div class="login-name">ASTRO<span>CARE</span></div><div class="login-overline">CREW HEALTH COMMAND</div></div></div>'
-        '<div class="login-copy"><div class="kicker">Secure mission access</div><h1>Health intelligence for the journey beyond Earth.</h1><p>Sign in to review your personal readiness signals, approved check-ins, and mission support guidance.</p></div></div>',
+        '<div class="login-copy"><div class="kicker">Secure mission access</div><h1>Health intelligence for the journey beyond Earth.</h1><p>Sign in to review your personal readiness signals, approved check-ins, and operational health guidance.</p></div></div>',
         unsafe_allow_html=True,
     )
     login_tab, create_tab = st.tabs(["Sign in", "Create astronaut profile"])

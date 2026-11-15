@@ -32,7 +32,6 @@ SECTION_SUBTITLES = {
     "Physical Wellness": "Track countermeasures, recovery, and the physical effects of altered gravity.",
     "Mental Wellness": "A private, human-centered check on mood, stress, sleep, and cognition.",
     "Space Environment": "Watch the habitat signals that shape crew health and performance.",
-    "Mission Support": "Find the next approved action, escalation path, and ground-support link.",
 }
 
 # The JSON library remains the source of truth for indicator definitions and thresholds.

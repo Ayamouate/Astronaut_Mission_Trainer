@@ -22,7 +22,7 @@ from components.metric_cards import render_indicator_cards, render_summary_cards
 from components.status_indicators import render_alert, render_signal_rows, sort_results
 from config import INDICATORS, ROOT, SECTION_SUBTITLES
 from engine import readiness_score, readiness_state, trend_for
-from gamification import current_streak
+from streaks import current_streak
 from state import initialize_state, save_check_in
 
 
@@ -57,11 +57,11 @@ def _selected_results(results: list[dict], ids: list[str]) -> list[dict]:
 def _elapsed_label(history: pd.DataFrame) -> str:
     if history.empty or "timestamp" not in history:
         return "Awaiting first check-in"
-    timestamps = history["timestamp"].dropna()
+    timestamps = pd.to_datetime(history["timestamp"], utc=True, errors="coerce").dropna()
     if timestamps.empty:
         return "Awaiting first check-in"
-    elapsed = timestamps.max() - timestamps.min()
-    return f"{max(elapsed.days, 0)} days logged"
+    days_logged = timestamps.dt.floor("D").nunique()
+    return f"{days_logged} days logged"
 
 
 def _last_assessment_label(history: pd.DataFrame) -> str:
@@ -140,9 +140,7 @@ def _recommendation_cards(physical_results: list[dict]) -> list[tuple[str, str, 
 def _render_overview(score: int, state: str, history: pd.DataFrame) -> None:
     st.markdown(
         f'<div class="panel"><div class="pw-overview">{_ring_svg(score)}'
-        '<div class="pw-overview-detail"><div class="title">Physical conditioning status <span style="color:var(--muted);font:500 .6rem var(--mono);letter-spacing:.08em">CALCULATED</span></div>'
-        '<div class="sub">Tracks musculoskeletal, cardiovascular, and recovery countermeasure signals that help offset microgravity-induced deconditioning — reduced mechanical loading that can reduce muscle strength, bone mineral density, and aerobic capacity over time. '
-        'The ring reflects only the physical-domain subset of your logged readings; thresholds are illustrative decision-support ranges, not clinical limits.</div></div>'
+        '<div class="pw-overview-detail"><div class="title">Physical conditioning status</div></div>'
         f'<div class="pw-overview-meta"><div>MONITORING PERIOD<br><strong>{_elapsed_label(history)}</strong></div><div>LAST ASSESSMENT<br><strong>{_last_assessment_label(history)}</strong></div><div>STATUS<br><strong>{state}</strong></div></div>'
         "</div></div>",
         unsafe_allow_html=True,

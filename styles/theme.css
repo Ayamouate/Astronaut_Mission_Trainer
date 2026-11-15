@@ -632,3 +632,39 @@ div[data-testid="stMetricValue"] { color: #f4f7fb; font-family: 'DM Mono', monos
 .header-profile .avatar { background: #252E53; border-color: var(--cyan); color: #C4CAFF; }
 .st-key-sidebar_profile_top .stButton > button { background: transparent; border-color: #52618F; box-shadow: none; color: var(--cyan); }
 .st-key-sidebar_profile_top .stButton > button:hover { border-color: var(--mint); color: var(--mint); }
+
+/* Keep Streamlit's form-submit hint from appearing under every input. */
+.stApp [data-testid="InputInstructions"] { display: none !important; }
+
+/* Give every Streamlit widget label the same spacing, size, and readable contrast. */
+.stApp [data-testid="stWidgetLabel"],
+.stApp [data-testid="stWidgetLabel"] p,
+.stApp .stTextInput label,
+.stApp .stNumberInput label,
+.stApp .stTextArea label,
+.stApp .stSelectbox label,
+.stApp .stSlider label,
+.stApp .stMultiSelect label,
+.stApp .stDateInput label,
+.stApp .stTimeInput label,
+.stApp [data-testid="stCheckbox"] label,
+.stApp [data-testid="stRadio"] > label,
+.stApp [data-testid="stToggle"] label {
+  color: #C8CEE5 !important;
+  font-family: var(--sans) !important;
+  font-size: .78rem !important;
+  line-height: 1.35 !important;
+}
+.stApp [data-testid="stWidgetLabel"] { margin-bottom: .35rem; }
+.stApp .stTextInput input,
+.stApp .stNumberInput input,
+.stApp .stTextArea textarea,
+.stApp .stSelectbox [data-baseweb="select"] > div,
+.stApp .stDateInput input,
+.stApp .stTimeInput input {
+  background: #151B30;
+  border-color: #354264;
+  color: var(--ink);
+}
+.stApp .stTextInput input::placeholder,
+.stApp .stTextArea textarea::placeholder { color: #8D96B4; opacity: 1; }

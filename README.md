@@ -26,6 +26,8 @@ source .venv/bin/activate
 streamlit run app.py
 ```
 
+Python bytecode cache folders (`__pycache__`) are generated automatically, ignored by Git, and safe to remove; Python recreates them as needed.
+
 ## How the application works
 
 ### Startup flow
@@ -54,6 +56,10 @@ data/sample_mission.csv
 
 The backend remains data-driven. Sections do not calculate clinical status themselves; they display the results produced by `engine.py`.
 
+### Current dashboard navigation
+
+The sidebar exposes five pages: Mission Overview, Health Monitoring, Physical Wellness, Mental Wellness, and Space Environment. The signed-in profile shortcut places the user's initials and display name on one horizontally aligned row.
+
 ## Project structure
 
 ```text
@@ -68,7 +74,6 @@ sections/
   physical_wellness.py         # Exercise, strength, recovery, countermeasures
   mental_wellness.py           # Mood, stress, sleep, cognition, privacy messaging
   space_environment.py         # Cabin CO₂, radiation, telemetry coverage
-  mission_support.py           # Alerts, guidance, equipment, mission support
 
 components/
   __init__.py
@@ -83,7 +88,7 @@ styles/
   theme.css                    # Global colors, typography, spacing, components
 
 engine.py                      # Indicator evaluation, readiness, trends, history
-gamification.py                # Streak, points, and badge helpers
+streaks.py                      # UTC calendar-day activity streak helper
 data/indicators.json           # Indicator definitions and illustrative thresholds
 data/sample_mission.csv        # Simulated 14-day mission history
 requirements.txt               # Python dependencies
@@ -99,7 +104,6 @@ The frontend is intentionally split so team members can work in parallel.
 | Physical Wellness | `sections/physical_wellness.py` | Exercise, strength, recovery, countermeasure views |
 | Mental Wellness | `sections/mental_wellness.py` | Private mood/stress/sleep/cognition workflow |
 | Space Environment | `sections/space_environment.py` | Habitat telemetry and environmental risk context |
-| Mission Support | `sections/mission_support.py` | Alerts, guidance, equipment readiness, escalation context |
 | Shared UI | `components/` and `styles/theme.css` | Components used by multiple sections |
 | Data/evaluation | `engine.py`, `state.py`, `config.py`, `data/` | State, thresholds, history, and calculations |
 
@@ -171,16 +175,16 @@ The global visual system lives in `styles/theme.css`.
 
 | Token | Value | Use |
 |---|---|---|
-| Deep Space | `#071321` | App background |
-| Panel Navy | `#0D1B2A` | Main panels |
-| Elevated Surface | `#14283B` | Cards and raised surfaces |
-| Electric Cyan | `#42D9E8` | Primary interaction and telemetry accent |
-| Mint Green | `#55E6B5` | Normal/healthy state |
-| Warning Amber | `#F4BC62` | Watch state |
-| Critical Red | `#F16B78` | Escalation state |
-| Primary Text | `#EAF2FA` | Main readable text |
+| Midnight | `#090D1B` | App background |
+| Indigo Panel | `#151B30` | Main panels |
+| Elevated Surface | `#10162A` | Cards and raised surfaces |
+| Periwinkle | `#8C9BFF` | Primary interaction and navigation accent |
+| Mint | `#62E2C0` | Normal/healthy state |
+| Warning Amber | `#FFC66D` | Watch state |
+| Coral | `#FF748D` | Escalation state |
+| Primary Text | `#F1F2FF` | Main readable text |
 
-Interface text uses Inter/Manrope. Telemetry, measurements, timestamps, labels, and status values use JetBrains Mono. Glow is intentionally restrained: selected or hovered body systems, active indicators, and important alerts may receive emphasis; normal cards should remain quiet.
+The interface uses a midnight indigo base with periwinkle navigation and control accents, mint healthy states, and warm amber/coral alerts. Panels use subtle layered gradients and hover depth. Interface text uses Inter/Manrope; telemetry, measurements, timestamps, labels, and status values use JetBrains Mono.
 
 ## Testing and verification
 
@@ -188,7 +192,7 @@ Compile the application modules:
 
 ```bash
 ./.venv/bin/python -m py_compile \
-  app.py config.py state.py engine.py gamification.py \
+  app.py config.py state.py engine.py streaks.py \
   sections/*.py components/*.py
 ```
 
@@ -215,7 +219,7 @@ print("All five sections render successfully.")
 PY
 ```
 
-When testing a UI change, also verify the relevant interaction: health check-in submission, body-system selection, mental-wellness input, or mission-support controls.
+When testing a UI change, also verify the relevant interaction: health check-in submission, body-system selection, mental-wellness input, and exercise-time logging.
 
 ## Medical and data boundaries
 

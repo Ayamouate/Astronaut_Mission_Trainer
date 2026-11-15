@@ -19,7 +19,7 @@ python -m pip install -r requirements.txt
 streamlit run app.py
 ```
 
-The dashboard starts with the supplied 14-day simulated mission history. The local `.venv` can also be reused when it already exists:
+Astronauts create a profile or sign in before opening the dashboard. Profiles and each astronaut's check-ins are stored locally in `data/astronauts.json`; passwords are stored as salted PBKDF2 hashes. This is a lightweight prototype store, so use synthetic data and do not deploy it for real medical records. New profiles start with an empty personal history. The local `.venv` can also be reused when it already exists:
 
 ```bash
 source .venv/bin/activate
@@ -31,7 +31,7 @@ streamlit run app.py
 ### Startup flow
 
 1. `app.py` configures the Streamlit page and loads `styles/theme.css`.
-2. `state.initialize_state()` loads the simulated history and derives the latest measurement mapping.
+2. `app.py` shows sign-in or profile creation and then loads only that astronaut's saved check-ins.
 3. `engine.evaluate_measurements()` evaluates available values against the configured indicator thresholds.
 4. The shared sidebar and section navigation are rendered.
 5. The selected section module is called through its public `render()` function.
@@ -154,7 +154,7 @@ The shared state keys are:
 | `checkins` | Number of check-ins in the current session |
 | `sleep_quality` | Mental-wellness session-only rating |
 
-`state.save_check_in()` merges a partial update, re-evaluates all available indicators, and appends a new row to the in-memory history. It does not write to the CSV file.
+`state.save_check_in()` merges a partial update, re-evaluates available indicators, appends to the in-memory history, and saves that check-in under the signed-in astronaut in `data/astronauts.json`. The sample CSV remains demo data and is not used for signed-in astronaut dashboards.
 
 Use bracket notation for session-state keys. For example:
 

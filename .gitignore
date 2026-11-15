@@ -1,0 +1,4 @@
+data/astronauts.json
+data/astronauts.tmp
+__pycache__/
+.venv/

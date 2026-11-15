@@ -34,7 +34,7 @@ def render() -> None:
 
     render_section_header("Mission Support", SECTION_SUBTITLES["Mission Support"], state)
     render_alert(state)
-    render_readiness_cards(score, state, results, checkins)
+    render_readiness_cards(score, state, results, checkins, history)
 
     render_section_bar("Mission health alerts", "ordered by urgency · simulated data")
     left, right = st.columns([1.15, .85], gap="large")
@@ -77,7 +77,7 @@ def render() -> None:
         st.markdown("</div>", unsafe_allow_html=True)
 
     points = points_for_results(results)
-    streak = current_streak(checkins)
+    streak = current_streak(history["timestamp"] if "timestamp" in history else [])
     badges = badges_for_checkins(checkins, streak, score)
     render_section_bar("Crew reinforcement", "consistency protects the baseline")
     left, right = st.columns([.8, 1.2], gap="large")

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any
+from datetime import date, datetime, timedelta
+from typing import Any, Iterable
 
 
 def points_for_results(results: list[dict[str, Any]]) -> int:
@@ -19,6 +20,25 @@ def badges_for_checkins(checkin_count: int, streak: int, score: int) -> list[dic
     ]
 
 
-def current_streak(checkin_count: int) -> int:
-    return min(checkin_count, 7)
+def current_streak(checkin_timestamps: Iterable[Any]) -> int:
+    """Count consecutive calendar days with at least one check-in, once per day."""
+    days: set[date] = set()
+    for timestamp in checkin_timestamps:
+        if isinstance(timestamp, datetime):
+            days.add(timestamp.date())
+        elif isinstance(timestamp, date):
+            days.add(timestamp)
+        elif timestamp:
+            try:
+                days.add(datetime.fromisoformat(str(timestamp)).date())
+            except ValueError:
+                continue
+    today = date.today()
+    # A streak remains active through today even if today's check-in is still pending.
+    cursor = today if today in days else today - timedelta(days=1)
+    streak = 0
+    while cursor in days:
+        streak += 1
+        cursor -= timedelta(days=1)
+    return streak
 

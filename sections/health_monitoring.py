@@ -20,6 +20,14 @@ HEALTH_INDICATORS = ["heart_rate", "systolic_bp", "spo2", "body_temp", "sleep_du
 CATEGORY_ORDER = ["Health Monitoring", "Physical Wellness", "Mental Wellness", "Space Environment"]
 
 
+@st.dialog("Health Monitoring", width="large")
+def _show_health_evaluation(results: list[dict]) -> None:
+    """Show the latest check-in results in a focused health-monitoring pop-up."""
+    st.markdown("### Core physiological signals")
+    st.caption("Latest evaluated check-in · Watch and Escalate labels flag readings for review.")
+    render_signal_rows(sort_results(results))
+
+
 def _input_value(indicator: dict, current: dict[str, float]) -> float:
     value = current.get(indicator["id"], indicator["default"])
     return min(max(float(value), float(indicator["min"])), float(indicator["max"]))
@@ -38,57 +46,58 @@ def _render_input(indicator: dict, current: dict[str, float], key_prefix: str) -
     )
 
 
-def _render_check_in() -> None:
-    """Render the original complete self-assessment without coupling it to other pages."""
+def _render_check_in() -> bool:
+    """Render every check-in category together and return whether it was evaluated."""
     current = st.session_state["measurement_values"]
     with st.form("mission_checkin"):
-        tabs = st.tabs(["Vitals", "Physical", "Mental", "Environment"])
         values: dict[str, float] = {}
-        for tab, category in zip(tabs, CATEGORY_ORDER):
-            with tab:
-                descriptions = {
-                    "Health Monitoring": "Core physiological signals",
-                    "Physical Wellness": "Recovery and countermeasures",
-                    "Mental Wellness": "Private performance and mood check",
-                    "Space Environment": "The habitat is part of the patient",
-                }
-                st.caption(descriptions[category])
-                category_items = [item for item in INDICATORS.values() if item.get("category") == category]
-                columns = st.columns(2)
-                for index, indicator in enumerate(category_items):
-                    with columns[index % 2]:
-                        values[indicator["id"]] = _render_input(indicator, current, "full_checkin")
-        submitted = st.form_submit_button("Save check-in and evaluate", use_container_width=True)
+        sections = {
+            "Health Monitoring": ("Vitals", "Core physiological signals"),
+            "Physical Wellness": ("Physical", "Recovery and countermeasures"),
+            "Mental Wellness": ("Mental", "Mood, stress, sleep, and cognition"),
+            "Space Environment": ("Environment", "Habitat conditions"),
+        }
+        for category in CATEGORY_ORDER:
+            title, description = sections[category]
+            st.markdown(f"#### {title}")
+            st.caption(description)
+            category_items = [item for item in INDICATORS.values() if item.get("category") == category]
+            columns = st.columns(2)
+            for index, indicator in enumerate(category_items):
+                with columns[index % 2]:
+                    values[indicator["id"]] = _render_input(indicator, current, "full_checkin")
+        submitted = st.form_submit_button("Evaluate my health", type="primary", use_container_width=True)
     if submitted:
         save_check_in(values, datetime.now(timezone.utc))
-        st.success("Check-in saved. Review the guidance below before resuming safety-critical work.")
+    return submitted
 
 
 def render() -> None:
     """Render the Health Monitoring dashboard."""
     initialize_state()
+    with st.expander("Open full check-in", expanded=True):
+        st.markdown('<div class="section-note form-note">Use approved devices and mission procedures. Symptoms and flight-surgeon direction take priority over any dashboard range.</div>', unsafe_allow_html=True)
+        evaluated = _render_check_in()
+
+    # Read after form submission so the evaluation shown on this same page is current.
     history = st.session_state["history"]
     results = st.session_state["last_results"]
     score = readiness_score(results)
     state = readiness_state(score, results)
+    if evaluated:
+        _show_health_evaluation(results)
 
     render_section_header("Health Monitoring", SECTION_SUBTITLES["Health Monitoring"], state)
     render_alert(state)
-    render_readiness_cards(score, state, results, st.session_state["checkins"])
+    render_readiness_cards(score, state, results, st.session_state["checkins"], history)
 
     render_section_bar("Core physiological signals", "latest evaluated check-in")
     render_indicator_cards(results, HEALTH_INDICATORS, INDICATORS, columns=3)
 
-    render_section_bar("Crew health map", "select a system to inspect the signal")
-    left, right = st.columns([1.05, 1.45], gap="large")
-    with left:
-        st.markdown('<div class="panel"><div class="panel-title">Body systems <span>LIVE</span></div>', unsafe_allow_html=True)
-        render_body_map(results, INDICATORS)
-        st.markdown("</div>", unsafe_allow_html=True)
-    with right:
-        st.markdown('<div class="panel"><div class="panel-title">Priority signals <span>latest check-in</span></div>', unsafe_allow_html=True)
-        render_signal_rows(sort_results(results), limit=7)
-        st.markdown("</div>", unsafe_allow_html=True)
+    render_section_bar("Crew health map", "select a system to inspect its readings")
+    st.markdown('<div class="panel">', unsafe_allow_html=True)
+    render_body_map(results, INDICATORS)
+    st.markdown("</div>", unsafe_allow_html=True)
 
     render_section_bar("Baseline trend", "last 14 mission days")
     chart_left, chart_right = st.columns(2, gap="large")
@@ -101,7 +110,4 @@ def render() -> None:
         render_history_chart(history, "sleep_duration", INDICATORS, "Recovery window")
         st.markdown("</div>", unsafe_allow_html=True)
 
-    with st.expander("Open full check-in", expanded=False):
-        st.markdown('<div class="section-note form-note">Use approved devices and mission procedures. Symptoms and flight-surgeon direction take priority over any dashboard range.</div>', unsafe_allow_html=True)
-        _render_check_in()
 

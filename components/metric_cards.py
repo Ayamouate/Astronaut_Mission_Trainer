@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
+import pandas as pd
+
 import streamlit as st
 
 from gamification import current_streak
@@ -24,16 +26,18 @@ def render_summary_cards(cards: Iterable[dict[str, str]], columns: int | None = 
             )
 
 
-def render_readiness_cards(score: int, state: str, results: list[dict[str, Any]], checkins: int) -> None:
+def render_readiness_cards(score: int, state: str, results: list[dict[str, Any]], checkins: int, history: pd.DataFrame | None = None) -> None:
     """Render the standard readiness, signal, streak, and sync cards."""
     attention = sum(item.get("status") == "attention" for item in results)
     critical = sum(item.get("status") == "critical" for item in results)
     score_value = f"{score}" if score else "—"
+    timestamps = history["timestamp"] if history is not None and "timestamp" in history else []
+    streak = current_streak(timestamps)
     render_summary_cards(
         [
             {"label": "Readiness index", "value": score_value, "detail": "out of 100 · decision support", "tone": "good" if state == "NOMINAL" else "warn" if state == "WATCH" else "bad"},
             {"label": "Signal review", "value": f"{attention + critical:02d}", "detail": f"{critical} escalate · {attention} watch", "tone": "bad" if critical else "warn" if attention else "good"},
-            {"label": "Check-in streak", "value": f"{current_streak(checkins):02d} d", "detail": "keep the rhythm", "tone": "good"},
+            {"label": "Check-in streak", "value": f"{streak:02d} d", "detail": "one check-in per calendar day", "tone": "good"},
             {"label": "Next sync", "value": "02:00", "detail": "UTC · scheduled window", "tone": "good"},
         ],
         columns=4,

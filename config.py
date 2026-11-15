@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parent
 DATA_DIR = ROOT / "data"
 INDICATORS_PATH = DATA_DIR / "indicators.json"
 SAMPLE_HISTORY_PATH = DATA_DIR / "sample_mission.csv"
+ASTRONAUT_DATA_PATH = DATA_DIR / "astronauts.json"
 THEME_PATH = ROOT / "styles" / "theme.css"
 
 APP_TITLE = "AstroCare · Crew Health Command"

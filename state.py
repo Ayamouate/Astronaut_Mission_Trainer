@@ -10,6 +10,7 @@ import streamlit as st
 
 from config import INDICATORS, SAMPLE_HISTORY_PATH
 from engine import append_check_in, evaluate_measurements
+from auth import get_checkins, save_checkin as persist_checkin
 
 
 def _empty_history() -> pd.DataFrame:
@@ -45,6 +46,20 @@ def _latest_measurements(history: pd.DataFrame) -> dict[str, float]:
 
 def initialize_state() -> None:
     """Initialize only the shared state required by all dashboard sections."""
+    email = st.session_state.get("astronaut_email")
+    if st.session_state.get("state_astronaut") != email:
+        entries = get_checkins(email) if email else []
+        st.session_state["history"] = pd.DataFrame(entries) if entries else _empty_history()
+        if not st.session_state["history"].empty:
+            st.session_state["history"]["timestamp"] = pd.to_datetime(st.session_state["history"]["timestamp"])
+        st.session_state["measurement_values"] = _latest_measurements(st.session_state["history"])
+        st.session_state["last_results"] = evaluate_measurements(st.session_state["measurement_values"], INDICATORS)
+        st.session_state["checkins"] = len(st.session_state["history"])
+        st.session_state["state_astronaut"] = email
+        st.session_state["selected_system"] = "Cardiovascular"
+        st.session_state["sleep_quality"] = 4
+        return
+
     if "history" not in st.session_state:
         st.session_state["history"] = _load_history()
 
@@ -79,4 +94,6 @@ def save_check_in(values: dict[str, Any], timestamp: datetime | str) -> None:
     timestamp_value = timestamp if isinstance(timestamp, str) else timestamp.strftime("%Y-%m-%d %H:%M")
     st.session_state["history"] = append_check_in(st.session_state["history"], merged, timestamp_value)
     st.session_state["checkins"] += 1
+    if st.session_state.get("astronaut_email"):
+        persist_checkin(st.session_state["astronaut_email"], {"timestamp": timestamp_value, **merged})
 

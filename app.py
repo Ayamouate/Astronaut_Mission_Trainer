@@ -22,6 +22,15 @@ SECTION_RENDERERS = {
     "Mission Support": mission_support,
 }
 
+SECTION_ICONS = {
+    "Mission Overview": "◆",
+    "Health Monitoring": "♥",
+    "Physical Wellness": "⚡",
+    "Mental Wellness": "◎",
+    "Space Environment": "⌁",
+    "Mission Support": "☍",
+}
+
 
 def inject_css() -> None:
     """Load the shared theme from disk so frontend styling has one owner."""
@@ -105,19 +114,12 @@ def main() -> None:
     render_sidebar(profile)
     selected = st.sidebar.radio(
         "Workspace", SECTION_ORDER, label_visibility="collapsed", key="dashboard_section",
+        format_func=lambda section: f"{SECTION_ICONS.get(section, '·')}  {section}",
         on_change=lambda: st.session_state.update(show_profile=False),
     )
     with st.sidebar:
         st.markdown('<div class="sidebar-bottom">', unsafe_allow_html=True)
-        display_name = str(profile.get("name", "Crew member")).strip() or "Crew member"
-        initial = display_name[0].upper()
-        profile_column, name_column = st.columns([0.24, 0.76], gap="small", vertical_alignment="center")
-        with profile_column:
-            st.markdown(f'<div class="sidebar-avatar" aria-hidden="true">{initial}</div>', unsafe_allow_html=True)
-        with name_column:
-            if st.button(display_name, key="sidebar_profile", help="Edit profile", use_container_width=True):
-                st.session_state["show_profile"] = not st.session_state.get("show_profile", False)
-        if st.button("Sign out", key="sidebar_signout", use_container_width=True):
+        if st.button("Sign out", key="sidebar_signout", width="stretch"):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.rerun()

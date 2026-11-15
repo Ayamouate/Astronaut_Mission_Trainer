@@ -1,27 +1,255 @@
-"""Physical Wellness section: exercise, strength, recovery, and countermeasures."""
+"""Physical Wellness section: astronaut physical conditioning, training load, musculoskeletal
+health, and recovery — built entirely from the crew member's own logged check-ins.
+
+Every number on this page is one of four kinds, and each panel says which:
+  MEASURED    — read directly from a logged check-in (data/sample_mission.csv or the crew's own history).
+  CALCULATED  — derived transparently from two or more measured values (e.g. a trend direction).
+  SIMULATED   — an explicitly labeled illustrative figure, shown only behind an opt-in toggle.
+  EDUCATIONAL — general spaceflight-physiology context, not a reading about this astronaut.
+No bone density, muscle-mass, or exercise-intensity values are shown because this prototype does
+not yet have that telemetry; those gaps are disclosed rather than filled with invented numbers.
+"""
 
 from __future__ import annotations
 
+import pandas as pd
 import streamlit as st
 
 from components.charts import render_bar_chart, render_history_chart
 from components.header import render_section_bar, render_section_header
 from components.metric_cards import render_indicator_cards, render_summary_cards
-from components.status_indicators import render_signal_rows, sort_results
+from components.status_indicators import render_alert, render_signal_rows, sort_results
 from config import INDICATORS, SECTION_SUBTITLES
 from engine import readiness_score, readiness_state, trend_for
+from gamification import current_streak
 from state import initialize_state
 
 
 PHYSICAL_INDICATORS = ["exercise_minutes", "grip_strength_pct", "heart_rate", "sleep_duration", "hydration_score"]
+RECOVERY_INDICATORS = ["sleep_duration", "hydration_score"]
+WEEKLY_TARGET_MIN = 420.0
+FREQUENCY_WINDOW = 14
 
 
 def _selected_results(results: list[dict], ids: list[str]) -> list[dict]:
     return [result for result in results if result.get("id") in ids]
 
 
+def _elapsed_label(history: pd.DataFrame) -> str:
+    if history.empty or "timestamp" not in history:
+        return "Awaiting first check-in"
+    timestamps = history["timestamp"].dropna()
+    if timestamps.empty:
+        return "Awaiting first check-in"
+    elapsed = timestamps.max() - timestamps.min()
+    return f"{max(elapsed.days, 0)} days logged"
+
+
+def _last_assessment_label(history: pd.DataFrame) -> str:
+    if history.empty or "timestamp" not in history:
+        return "No check-in yet"
+    timestamps = history["timestamp"].dropna()
+    if timestamps.empty:
+        return "No check-in yet"
+    return timestamps.max().strftime("%b %d · %H:%M")
+
+
+def _ring_svg(score: int) -> str:
+    """A small MEASURED/CALCULATED readiness ring — no decorative fabricated motion."""
+    radius = 45
+    circumference = 2 * 3.14159265 * radius
+    dash = circumference * max(min(score, 100), 0) / 100
+    gap = circumference - dash
+    value_text = f"{score}" if score else "—"
+    return (
+        '<div class="pw-ring-wrap"><svg viewBox="0 0 108 108" role="img" aria-label="Physical readiness ring">'
+        f'<circle class="pw-ring-track" cx="54" cy="54" r="{radius}"></circle>'
+        f'<circle class="pw-ring-value" cx="54" cy="54" r="{radius}" stroke-dasharray="{dash:.1f} {gap:.1f}"></circle>'
+        f'</svg><div class="pw-ring-label"><strong>{value_text}</strong><span>Readiness</span></div></div>'
+    )
+
+
+def _training_frequency(history: pd.DataFrame, window: int = FREQUENCY_WINDOW) -> tuple[int, list[bool]]:
+    """Count days with a logged exercise minute total above zero — a measured compliance signal."""
+    if history.empty or "exercise_minutes" not in history.columns:
+        return 0, [False] * window
+    tail = history.tail(window)
+    flags = [bool(value and value > 0) for value in pd.to_numeric(tail["exercise_minutes"], errors="coerce").fillna(0)]
+    flags = ([False] * (window - len(flags))) + flags
+    return sum(flags), flags
+
+
+def _recovery_balance(history: pd.DataFrame) -> dict[str, str]:
+    """A CALCULATED indicator: compares the astronaut's own sleep and exercise trend directions."""
+    sleep_trend = trend_for(history, "sleep_duration")
+    exercise_trend = trend_for(history, "exercise_minutes")
+    if sleep_trend["direction"] == "down" and exercise_trend["direction"] == "up":
+        return {"label": "Recovery debt risk", "tone": "warn", "detail": "Logged training load is rising while sleep duration is falling. Consider protecting the next rest window before increasing load further."}
+    if sleep_trend["direction"] == "up" and exercise_trend["direction"] != "up":
+        return {"label": "Recovery trending positive", "tone": "good", "detail": "Sleep duration is improving relative to recent training load — a favorable balance for continued conditioning."}
+    return {"label": "Balanced load", "tone": "good", "detail": "No strong divergence between logged training load and sleep trend. Keep the current countermeasure rhythm."}
+
+
+def _recommendation_cards(physical_results: list[dict]) -> list[tuple[str, str, str]]:
+    """Build recommendation cards from the indicator library's own action text — never fabricated."""
+    prioritized = sort_results(physical_results)
+    actionable = [item for item in prioritized if item.get("status") in {"attention", "critical"}]
+    if not actionable:
+        actionable = [item for item in prioritized if item.get("status") == "normal"]
+    return [(item.get("label", "Signal"), item.get("status", "unknown"), item.get("action") or "Follow the approved mission protocol.") for item in actionable[:3]]
+
+
+def _render_overview(score: int, state: str, history: pd.DataFrame) -> None:
+    st.markdown(
+        f'<div class="panel"><div class="pw-overview">{_ring_svg(score)}'
+        '<div class="pw-overview-detail"><div class="title">Physical conditioning status <span style="color:var(--muted);font:500 .6rem var(--mono);letter-spacing:.08em">CALCULATED</span></div>'
+        '<div class="sub">Tracks musculoskeletal, cardiovascular, and recovery countermeasure signals that help offset microgravity-induced deconditioning — reduced mechanical loading that can reduce muscle strength, bone mineral density, and aerobic capacity over time. '
+        'The ring reflects only the physical-domain subset of your logged readings; thresholds are illustrative decision-support ranges, not clinical limits.</div></div>'
+        f'<div class="pw-overview-meta"><div>MONITORING PERIOD<br><strong>{_elapsed_label(history)}</strong></div><div>LAST ASSESSMENT<br><strong>{_last_assessment_label(history)}</strong></div><div>STATUS<br><strong>{state}</strong></div></div>'
+        "</div></div>",
+        unsafe_allow_html=True,
+    )
+
+
+def _render_training_module(history: pd.DataFrame) -> None:
+    render_section_bar("Training & exercise monitoring", "exercise compliance · measured from logged check-ins")
+    recent_minutes = float(history["exercise_minutes"].tail(7).sum()) if "exercise_minutes" in history.columns else 0.0
+    progress = min(max(recent_minutes / WEEKLY_TARGET_MIN, 0.0), 1.0)
+    trained_days, flags = _training_frequency(history)
+    trained_timestamps = []
+    if "exercise_minutes" in history.columns:
+        mask = pd.to_numeric(history["exercise_minutes"], errors="coerce").fillna(0) > 0
+        trained_timestamps = history.loc[mask, "timestamp"] if "timestamp" in history else []
+    streak = current_streak(trained_timestamps)
+
+    left, right = st.columns([1.2, 0.8], gap="large")
+    with left:
+        st.markdown('<div class="panel progress-panel"><div class="panel-title">Aerobic & resistive countermeasure compliance <span>WEEKLY VIEW</span></div>', unsafe_allow_html=True)
+        st.progress(progress)
+        st.markdown(f'<div class="progress-readout"><strong>{recent_minutes:.0f} min</strong><span>of {WEEKLY_TARGET_MIN:.0f} illustrative weekly minutes logged</span></div>', unsafe_allow_html=True)
+        st.caption("Exercise is a primary countermeasure for bone, muscle, and cardiovascular changes in altered gravity. This target is a prototype planning aid — the mission-prescribed exercise plan always takes priority.")
+        st.markdown("</div>", unsafe_allow_html=True)
+    with right:
+        render_summary_cards(
+            [
+                {"label": "Training frequency", "value": f"{trained_days} / {FREQUENCY_WINDOW} d", "detail": "days with a logged session", "tone": "good" if trained_days >= FREQUENCY_WINDOW * 0.5 else "warn"},
+                {"label": "Session streak", "value": f"{streak} d", "detail": "consecutive days trained", "tone": "good"},
+            ],
+            columns=2,
+        )
+        bars = "".join(f'<div class="pw-freq-day{" done" if flag else ""}"></div>' for flag in flags)
+        st.markdown(f'<div class="section-note" style="margin:.6rem 0 .3rem">Last {FREQUENCY_WINDOW} days</div><div class="pw-freq-track">{bars}</div>', unsafe_allow_html=True)
+
+    simulate_split = st.toggle(
+        "Show illustrative aerobic / resistive split",
+        value=False,
+        key="physical_training_split",
+        help="Splits your real weekly exercise total using a fixed illustrative ratio. This split is not separately measured — switch it off to see only measured totals.",
+    )
+    if simulate_split:
+        aerobic, resistive = recent_minutes * 0.6, recent_minutes * 0.4
+        columns = st.columns(2)
+        for column, (label, value, color) in zip(columns, [("Aerobic (illustrative)", aerobic, "#36D6E7"), ("Resistive (illustrative)", resistive, "#4D8DFF")]):
+            with column:
+                st.markdown(
+                    f'<div class="telemetry-card"><div class="telemetry-card-head"><span class="telemetry-label"><span class="pulse-dot" style="--pulse-color:{color}"></span>{label}</span><span class="telemetry-mode">SIM</span></div>'
+                    f'<div class="telemetry-value">{value:.0f} min</div><div class="telemetry-detail" style="color:{color}">60/40 illustrative split of your logged total</div></div>',
+                    unsafe_allow_html=True,
+                )
+
+
+def _render_musculoskeletal_module(results: list[dict], history: pd.DataFrame) -> None:
+    render_section_bar("Musculoskeletal health", "microgravity-induced atrophy and bone-density context")
+    left, right = st.columns([1.1, 0.9], gap="large")
+    with left:
+        grip = next((item for item in results if item.get("id") == "grip_strength_pct"), None)
+        trend = trend_for(history, "grip_strength_pct")
+        tone = "good" if grip and grip.get("status") == "normal" else "warn" if grip and grip.get("status") == "attention" else "bad" if grip and grip.get("status") == "critical" else "muted"
+        value_text = "—" if not grip or grip.get("value") is None else f'{grip["value"]:g} %'
+        st.markdown(
+            f'<div class="panel"><div class="panel-title">Grip strength vs. personal baseline <span>MEASURED</span></div>'
+            f'<div class="metric-card" style="margin-bottom:0"><div class="label">Functional strength</div><div class="number {tone}">{value_text}</div>'
+            f'<div class="detail">{grip.get("status_label", "No reading") if grip else "No reading"}</div>'
+            f'<div class="trend {trend["direction"]}">{"↑" if trend["direction"]=="up" else "↓" if trend["direction"]=="down" else "→"} {trend["label"]}</div></div>'
+            f'<p style="color:var(--muted);font-size:.74rem;line-height:1.55;margin:.9rem 0 0">{INDICATORS["grip_strength_pct"]["why_exam"]}</p></div>',
+            unsafe_allow_html=True,
+        )
+    with right:
+        st.markdown(
+            '<div class="pw-banner"><span class="icon">◌</span><div><strong>Bone density & lean muscle mass — not yet integrated</strong>'
+            '<p>DEXA-equivalent bone mineral density and body-composition telemetry are intentionally hidden until validated hardware is available. Grip strength and logged exercise minutes are the only musculoskeletal signals this prototype can measure today.</p></div></div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            '<div class="info-panel" style="margin-top:.8rem"><div class="panel-title">Why this matters <span>EDUCATIONAL</span></div>'
+            "<p>Reduced mechanical loading in microgravity is associated with accelerated bone mineral density loss (particularly in weight-bearing bone) and skeletal-muscle atrophy, alongside cardiovascular deconditioning from fluid redistribution. "
+            "Resistance and aerobic exercise are the primary in-flight countermeasures; this general context does not describe a measurement taken from this astronaut.</p></div>",
+            unsafe_allow_html=True,
+        )
+
+
+def _render_recovery_module(physical_results: list[dict], history: pd.DataFrame) -> None:
+    render_section_bar("Recovery & physical readiness", "sleep, hydration, and training-load balance")
+    left, right = st.columns([1.1, 0.9], gap="large")
+    with left:
+        st.markdown('<div class="panel"><div class="panel-title">Recovery signals <span>MEASURED</span></div>', unsafe_allow_html=True)
+        render_signal_rows(sort_results(_selected_results(physical_results, RECOVERY_INDICATORS)))
+        st.markdown("</div>", unsafe_allow_html=True)
+    with right:
+        balance = _recovery_balance(history)
+        emphasis_class = " nominal" if balance["tone"] == "good" else ""
+        status_class = "" if balance["tone"] == "good" else "attention"
+        st.markdown(
+            f'<div class="panel"><div class="panel-title">Training load vs. recovery <span>CALCULATED</span></div>'
+            f'<div class="action-emphasis{emphasis_class}"><span class="status-text {status_class}">{balance["label"].upper()}</span>'
+            f'<strong>{balance["label"]}</strong><p>{balance["detail"]}</p></div>'
+            '<p style="color:var(--muted);font-size:.7rem;line-height:1.5;margin-top:.8rem">Derived by comparing your own logged sleep-duration and exercise-minute trends — not a clinical fatigue score.</p></div>',
+            unsafe_allow_html=True,
+        )
+
+
+def _render_analytics_module(history: pd.DataFrame) -> None:
+    render_section_bar("Physical performance analytics", "measured trends · last mission days")
+    top_left, top_right = st.columns(2, gap="large")
+    with top_left:
+        st.markdown('<div class="panel"><div class="panel-title">Exercise minutes <span>MEASURED</span></div>', unsafe_allow_html=True)
+        render_bar_chart(history, "exercise_minutes", INDICATORS, "Logged exercise minutes · last 7 days")
+        st.markdown("</div>", unsafe_allow_html=True)
+    with top_right:
+        st.markdown('<div class="panel"><div class="panel-title">Grip strength trend <span>MEASURED</span></div>', unsafe_allow_html=True)
+        render_history_chart(history, "grip_strength_pct", INDICATORS, "Strength vs. personal baseline", color="#4ED6B0")
+        st.markdown("</div>", unsafe_allow_html=True)
+    bottom_left, bottom_right = st.columns(2, gap="large")
+    with bottom_left:
+        st.markdown('<div class="panel"><div class="panel-title">Resting heart rate <span>MEASURED</span></div>', unsafe_allow_html=True)
+        render_history_chart(history, "heart_rate", INDICATORS, "Cardiovascular baseline", color="#4D8DFF")
+        st.markdown("</div>", unsafe_allow_html=True)
+    with bottom_right:
+        st.markdown('<div class="panel"><div class="panel-title">Sleep / recovery window <span>MEASURED</span></div>', unsafe_allow_html=True)
+        render_history_chart(history, "sleep_duration", INDICATORS, "Recovery window", color="#36D6E7")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+
+def _render_recommendations(physical_results: list[dict]) -> None:
+    render_section_bar("Training recommendations", "general educational guidance, not a clinical directive")
+    cards = _recommendation_cards(physical_results)
+    if not cards:
+        st.info("No physical-wellness readings are available yet. Complete a check-in to unlock tailored guidance.")
+    for index, (label, status, action) in enumerate(cards, start=1):
+        st.markdown(
+            f'<div class="action-card"><div class="step">{index:02d}</div><div><strong>{label}</strong>'
+            f'<span class="action-status {status}">{status.upper()}</span><p>{action}</p></div></div>',
+            unsafe_allow_html=True,
+        )
+    st.markdown(
+        '<div class="info-panel" style="margin-top:.6rem"><div class="panel-title">Scope of this guidance <span>EDUCATIONAL</span></div>'
+        "<p>Recommendations above are generated from your own indicator statuses using the mission indicator library's pre-written guidance text. They are decision support for a self-assessment prototype — not a diagnosis, and not a substitute for the mission medical plan, exercise specialist, or flight-surgeon direction.</p></div>",
+        unsafe_allow_html=True,
+    )
+
+
 def render() -> None:
-    """Render the Physical Wellness dashboard."""
+    """Render the redesigned Physical Wellness dashboard."""
     initialize_state()
     history = st.session_state["history"]
     results = st.session_state["last_results"]
@@ -30,53 +258,14 @@ def render() -> None:
     state = readiness_state(score, physical_results)
 
     render_section_header("Physical Wellness", SECTION_SUBTITLES["Physical Wellness"], state)
-    render_indicator_cards(results, PHYSICAL_INDICATORS, INDICATORS, columns=3)
-    render_summary_cards([
-        {"label": "Bone health", "value": "N/A", "detail": "No validated bone telemetry in demo data", "tone": "muted"},
-    ], columns=1)
+    _render_overview(score, state, history)
+    render_alert(state)
 
-    recent_minutes = 0.0
-    if "exercise_minutes" in history.columns:
-        recent_minutes = float(history["exercise_minutes"].tail(7).sum())
-    weekly_target = 420.0  # Demonstration schedule target; not a universal clinical limit.
-    progress = min(max(recent_minutes / weekly_target, 0.0), 1.0)
-    render_section_bar("Countermeasure progress", "last 7 mission days · illustrative schedule")
-    left, right = st.columns([1.25, .75], gap="large")
-    with left:
-        st.markdown('<div class="panel progress-panel"><div class="panel-title">Exercise completion <span>WEEKLY VIEW</span></div>', unsafe_allow_html=True)
-        st.progress(progress)
-        st.markdown(f'<div class="progress-readout"><strong>{recent_minutes:.0f} min</strong><span>of {weekly_target:.0f} illustrative minutes logged</span></div>', unsafe_allow_html=True)
-        st.caption("The displayed target is a prototype planning aid. Mission-prescribed exercise plans and medical guidance take priority.")
-        st.markdown("</div>", unsafe_allow_html=True)
-    with right:
-        current = next((item for item in physical_results if item.get("id") == "exercise_minutes"), None)
-        tone = "good" if current and current.get("status") == "normal" else "warn" if current and current.get("status") == "attention" else "bad"
-        render_summary_cards([{"label": "Today’s exercise", "value": "—" if not current or current.get("value") is None else f'{current["value"]:g} min', "detail": current.get("status_label", "No reading") if current else "No reading", "tone": tone}], columns=1)
+    render_section_bar("Key performance indicators", "measured from your logged check-ins · trend vs. recent history")
+    render_indicator_cards(results, PHYSICAL_INDICATORS, INDICATORS, columns=5, history=history)
 
-    render_section_bar("Activity and recovery history", "use trends to discuss the plan with the crew medical team")
-    chart_left, chart_right = st.columns(2, gap="large")
-    with chart_left:
-        st.markdown('<div class="panel">', unsafe_allow_html=True)
-        render_bar_chart(history, "exercise_minutes", INDICATORS, "Exercise minutes")
-        st.markdown("</div>", unsafe_allow_html=True)
-    with chart_right:
-        st.markdown('<div class="panel">', unsafe_allow_html=True)
-        render_history_chart(history, "grip_strength_pct", INDICATORS, "Strength vs. personal baseline", color="#F4BC62")
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    render_section_bar("Signals to discuss", "priority-ordered guidance")
-    left, right = st.columns([1.15, .85], gap="large")
-    with left:
-        st.markdown('<div class="panel">', unsafe_allow_html=True)
-        render_signal_rows(sort_results(physical_results))
-        st.markdown("</div>", unsafe_allow_html=True)
-    with right:
-        st.markdown('<div class="panel"><div class="panel-title">Recovery readout <span>CONTEXT</span></div>', unsafe_allow_html=True)
-        for indicator_id in ["sleep_duration", "hydration_score", "grip_strength_pct"]:
-            indicator = INDICATORS[indicator_id]
-            trend = trend_for(history, indicator_id)
-            st.markdown(f'<div class="signal-row"><div class="signal-main"><div class="signal-label">{indicator["short_label"]}</div><div class="signal-message">{indicator["why_exam"]}</div></div><div class="status-text">{trend["label"]}</div></div>', unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown('<div class="info-panel"><div class="panel-title">Why microgravity matters <span>SPACE PHYSIOLOGY</span></div><p>Reduced mechanical loading can contribute to muscle and bone changes, while fluid redistribution and workload affect cardiovascular conditioning. Approved aerobic and resistive exercise, adequate recovery, and trend review are countermeasures—not a substitute for the mission medical plan.</p></div>', unsafe_allow_html=True)
-
+    _render_training_module(history)
+    _render_musculoskeletal_module(results, history)
+    _render_recovery_module(physical_results, history)
+    _render_analytics_module(history)
+    _render_recommendations(physical_results)

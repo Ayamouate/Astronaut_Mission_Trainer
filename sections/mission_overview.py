@@ -66,7 +66,7 @@ def render() -> None:
         st.markdown("</div>", unsafe_allow_html=True)
 
     render_section_bar("Core health snapshot", "latest evaluated readings")
-    render_indicator_cards(results, ["heart_rate", "systolic_bp", "spo2", "body_temp", "sleep_duration", "hydration_score"], INDICATORS, columns=3)
+    render_indicator_cards(results, ["heart_rate", "systolic_bp", "spo2", "body_temp", "sleep_duration", "hydration_score"], INDICATORS, columns=3, history=history)
 
     render_section_bar("Continue your mission workflow", "open a focused workspace")
     quick_sections = [("Health Monitoring", "Vitals, readiness, and full check-in"), ("Physical Wellness", "Exercise and recovery"), ("Mental Wellness", "Private wellbeing check-in"), ("Space Environment", "Cabin and radiation context"), ("Mission Support", "Actions and escalation guidance")]
@@ -83,6 +83,4 @@ def render() -> None:
             st.caption(detail)
 
     render_section_bar("Recent health trend", "context for human review")
-    st.markdown('<div class="panel">', unsafe_allow_html=True)
     render_history_chart(history, "heart_rate", INDICATORS, "Cardiovascular load · last 14 mission days")
-    st.markdown("</div>", unsafe_allow_html=True)

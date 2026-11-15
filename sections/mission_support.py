@@ -89,7 +89,7 @@ def render() -> None:
     with right:
         st.markdown('<div class="panel"><div class="panel-title">Earned on this mission <span>REINFORCEMENT</span></div>', unsafe_allow_html=True)
         for badge in badges:
-            color = "#83f2ce" if badge["earned"] else "#516579"
+            color = "#4ED6B0" if badge["earned"] else "#516579"
             earned = "earned" if badge["earned"] else "locked"
             st.markdown(f'<div class="signal-row"><div style="font-size:1.15rem;color:{color};width:25px;text-align:center">{badge["icon"]}</div><div class="signal-main"><div class="signal-label">{badge["name"]}</div><div class="signal-message">{badge["detail"]}</div></div><div class="status-text" style="color:{color}">{earned}</div></div>', unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)

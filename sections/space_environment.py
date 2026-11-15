@@ -29,8 +29,8 @@ def _sparkline(color: str) -> str:
 def _render_simulated_cards() -> None:
     """Render non-persistent demo telemetry with a live-monitoring treatment."""
     cards = [
-        ("Cabin CO₂", "2200 ppm", "NOMINAL · simulated", "#42D9E8"),
-        ("Radiation dose", "0.8 mSv", "NOMINAL · simulated", "#F4BC62"),
+        ("Cabin CO₂", "2200 ppm", "NOMINAL · simulated", "#36D6E7"),
+        ("Radiation dose", "0.8 mSv", "NOMINAL · simulated", "#4D8DFF"),
     ]
     columns = st.columns(2)
     for column, (label, value, detail, color) in zip(columns, cards):
@@ -59,7 +59,7 @@ def render() -> None:
     if simulate:
         _render_simulated_cards()
     else:
-        render_indicator_cards(results, ENVIRONMENT_INDICATORS, INDICATORS, columns=2)
+        render_indicator_cards(results, ENVIRONMENT_INDICATORS, INDICATORS, columns=2, history=history)
 
     render_section_bar("Telemetry coverage", "vehicle integration status")
     st.markdown(
@@ -71,11 +71,11 @@ def render() -> None:
     left, right = st.columns(2, gap="large")
     with left:
         st.markdown('<div class="panel">', unsafe_allow_html=True)
-        render_history_chart(history, "cabin_co2", INDICATORS, "Cabin CO₂", color="#42D9E8")
+        render_history_chart(history, "cabin_co2", INDICATORS, "Cabin CO₂", color="#36D6E7")
         st.markdown("</div>", unsafe_allow_html=True)
     with right:
         st.markdown('<div class="panel">', unsafe_allow_html=True)
-        render_history_chart(history, "radiation_dose", INDICATORS, "Radiation dose · last 24 h", color="#F4BC62")
+        render_history_chart(history, "radiation_dose", INDICATORS, "Radiation dose · last 24 h", color="#4D8DFF")
         st.markdown("</div>", unsafe_allow_html=True)
 
     render_section_bar("Environmental notifications", "operations context matters")

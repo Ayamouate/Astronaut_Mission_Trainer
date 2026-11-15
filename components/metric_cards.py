@@ -8,7 +8,11 @@ import pandas as pd
 
 import streamlit as st
 
+from engine import trend_for
 from gamification import current_streak
+
+
+_TREND_ARROW = {"up": "↑", "down": "↓", "flat": "→"}
 
 
 def render_summary_cards(cards: Iterable[dict[str, str]], columns: int | None = None) -> None:
@@ -20,8 +24,9 @@ def render_summary_cards(cards: Iterable[dict[str, str]], columns: int | None = 
     for column, card in zip(cols * ((len(cards) + len(cols) - 1) // len(cols)), cards):
         with column:
             tone = card.get("tone", "good")
+            trend_html = f'<div class="trend {card["trend_direction"]}">{_TREND_ARROW.get(card["trend_direction"], "→")} {card["trend_label"]}</div>' if card.get("trend_label") else ""
             st.markdown(
-                f'<div class="metric-card"><div class="label">{card.get("label", "Metric")}</div><div class="number {tone}">{card.get("value", "—")}</div><div class="detail">{card.get("detail", "")}</div></div>',
+                f'<div class="metric-card"><div class="label">{card.get("label", "Metric")}</div><div class="number {tone}">{card.get("value", "—")}</div><div class="detail">{card.get("detail", "")}</div>{trend_html}</div>',
                 unsafe_allow_html=True,
             )
 
@@ -44,8 +49,18 @@ def render_readiness_cards(score: int, state: str, results: list[dict[str, Any]]
     )
 
 
-def render_indicator_cards(results: list[dict[str, Any]], indicator_ids: Iterable[str], indicators: dict[str, dict[str, Any]], columns: int = 4) -> None:
-    """Render current values for a chosen set of indicator IDs."""
+def render_indicator_cards(
+    results: list[dict[str, Any]],
+    indicator_ids: Iterable[str],
+    indicators: dict[str, dict[str, Any]],
+    columns: int = 4,
+    history: pd.DataFrame | None = None,
+) -> None:
+    """Render current values for a chosen set of indicator IDs.
+
+    When `history` is supplied, each card shows a trend arrow computed from the
+    astronaut's own recorded check-ins (never fabricated or simulated).
+    """
     result_by_id = {result.get("id"): result for result in results}
     cards = []
     for indicator_id in indicator_ids:
@@ -57,6 +72,12 @@ def render_indicator_cards(results: list[dict[str, Any]], indicator_ids: Iterabl
         value = result.get("value")
         value_text = "—" if value is None else f"{value:g}"
         tone = "good" if status == "normal" else "warn" if status == "attention" else "bad" if status == "critical" else "muted"
-        cards.append({"label": indicator.get("short_label", indicator.get("label", indicator_id)), "value": f'{value_text} {indicator.get("unit", "")}', "detail": result.get("status_label", "No reading"), "tone": tone})
+        card = {"label": indicator.get("short_label", indicator.get("label", indicator_id)), "value": f'{value_text} {indicator.get("unit", "")}', "detail": result.get("status_label", "No reading"), "tone": tone}
+        if history is not None and not history.empty and indicator_id in history.columns:
+            trend = trend_for(history, indicator_id)
+            if trend["label"] not in {"No trend", "Building baseline"}:
+                card["trend_direction"] = trend["direction"]
+                card["trend_label"] = trend["label"]
+        cards.append(card)
     render_summary_cards(cards, columns=columns)
 

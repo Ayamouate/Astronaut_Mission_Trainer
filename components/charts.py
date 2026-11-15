@@ -9,14 +9,14 @@ import plotly.graph_objects as go
 import streamlit as st
 
 
-COLORS = ["#42D9E8", "#55E6B5", "#F4BC62", "#F16B78", "#7EA6FF"]
+COLORS = ["#36D6E7", "#4ED6B0", "#4D8DFF", "#F5B942", "#F16B72"]
 
 
 def _available(history: pd.DataFrame, indicator_ids: Iterable[str]) -> list[str]:
     return [indicator_id for indicator_id in indicator_ids if indicator_id in history.columns]
 
 
-def render_history_chart(history: pd.DataFrame, indicator_id: str, indicators: dict[str, dict], title: str | None = None, color: str = "#42D9E8", height: int = 245) -> None:
+def render_history_chart(history: pd.DataFrame, indicator_id: str, indicators: dict[str, dict], title: str | None = None, color: str = "#36D6E7", height: int = 245) -> None:
     """Render one indicator over time with its configured normal band."""
     indicator = indicators.get(indicator_id)
     if not indicator or indicator_id not in history.columns or history.empty:
@@ -53,11 +53,11 @@ def render_bar_chart(history: pd.DataFrame, indicator_id: str, indicators: dict[
         st.info("No activity history is available yet.")
         return
     recent = history.tail(days)
-    fig = go.Figure(go.Bar(x=recent.get("timestamp"), y=pd.to_numeric(recent[indicator_id], errors="coerce"), marker_color="#42D9E8", hovertemplate=f"%{{x|%b %d}}<br><b>%{{y:.0f}} {indicator.get('unit', '')}</b><extra></extra>"))
+    fig = go.Figure(go.Bar(x=recent.get("timestamp"), y=pd.to_numeric(recent[indicator_id], errors="coerce"), marker_color="#36D6E7", hovertemplate=f"%{{x|%b %d}}<br><b>%{{y:.0f}} {indicator.get('unit', '')}</b><extra></extra>"))
     _style(fig, height=250, y_title=indicator.get("unit", ""), title=title)
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 
 def _style(fig: go.Figure, height: int, y_title: str, title: str | None) -> None:
-    fig.update_layout(title=title, height=height, margin={"l": 8, "r": 8, "t": 28 if title else 10, "b": 8}, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font={"family": "JetBrains Mono", "color": "#93A9B9", "size": 11}, showlegend=False, xaxis={"showgrid": False, "linecolor": "#29435A", "tickfont": {"size": 10}}, yaxis={"showgrid": True, "gridcolor": "#1D3548", "zeroline": False, "title": {"text": y_title, "font": {"size": 10}}, "tickfont": {"size": 10}})
+    fig.update_layout(title=title, height=height, margin={"l": 8, "r": 8, "t": 28 if title else 10, "b": 8}, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font={"family": "JetBrains Mono", "color": "#93A9B9", "size": 11}, showlegend=False, xaxis={"showgrid": False, "linecolor": "#203149", "tickfont": {"size": 10}}, yaxis={"showgrid": True, "gridcolor": "#182840", "zeroline": False, "title": {"text": y_title, "font": {"size": 10}}, "tickfont": {"size": 10}})
 

@@ -92,7 +92,7 @@ def render() -> None:
     render_readiness_cards(score, state, results, st.session_state["checkins"], history)
 
     render_section_bar("Core physiological signals", "latest evaluated check-in")
-    render_indicator_cards(results, HEALTH_INDICATORS, INDICATORS, columns=3)
+    render_indicator_cards(results, HEALTH_INDICATORS, INDICATORS, columns=3, history=history)
 
     render_section_bar("Crew health map", "select a system to inspect its readings")
     render_body_map(results, INDICATORS)

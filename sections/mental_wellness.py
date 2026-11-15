@@ -58,7 +58,7 @@ def render() -> None:
 
     render_section_header("Mental Wellness", SECTION_SUBTITLES["Mental Wellness"], state)
     render_alert(state)
-    render_indicator_cards(results, MENTAL_INDICATORS, INDICATORS, columns=4)
+    render_indicator_cards(results, MENTAL_INDICATORS, INDICATORS, columns=4, history=history)
     render_summary_cards([
         {"label": "Fatigue level", "value": "N/A", "detail": "Use sleep and reaction-time trends as context", "tone": "muted"},
         {"label": "Social connection", "value": "N/A", "detail": "No direct isolation telemetry in demo data", "tone": "muted"},
